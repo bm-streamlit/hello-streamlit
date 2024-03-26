@@ -3,6 +3,7 @@ from pathlib import Path
 import sqlite3
 
 import streamlit as st
+from st_aggrid import AgGrid, GridOptionsBuilder
 import altair as alt
 import pandas as pd
 
@@ -190,17 +191,22 @@ if db_was_just_created:
 # Load data from database
 df = load_data(conn)
 
+builder = GridOptionsBuilder.from_dataframe(df)
+builder.configure_default_column(editable=True)
+builder.configure_column("id", editable=False)
+
 # Display data with editable table
-edited_df = st.data_editor(
-    df,
-    disabled=['id'], # Don't allow editing the 'id' column.
-    num_rows='dynamic', # Allow appending/deleting rows.
-    column_config={
-        # Show dollar sign before price columns.
-        "price": st.column_config.NumberColumn(format="$%.2f"),
-        "cost_price": st.column_config.NumberColumn(format="$%.2f"),
-    },
-    key='inventory_table')
+edited_df = AgGrid(df, builder.build())
+# st.data_editor(
+#     df,
+#     disabled=['id'], # Don't allow editing the 'id' column.
+#     num_rows='dynamic', # Allow appending/deleting rows.
+#     column_config={
+#         # Show dollar sign before price columns.
+#         "price": st.column_config.NumberColumn(format="$%.2f"),
+#         "cost_price": st.column_config.NumberColumn(format="$%.2f"),
+#     },
+#     key='inventory_table')
 
 has_uncommitted_changes = any(len(v) for v in st.session_state.inventory_table.values())
 
