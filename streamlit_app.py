@@ -1,7 +1,14 @@
+import base64
 from collections import defaultdict
+from hashlib import md5
+import os
 from pathlib import Path
 import sqlite3
 
+from PIL import Image
+from io import BytesIO
+
+import requests
 import streamlit as st
 from st_aggrid import AgGrid, GridOptionsBuilder, JsCode,GridUpdateMode
 import altair as alt
@@ -190,6 +197,29 @@ st.info('''
 
 # # Load data from database
 # df = load_data(conn)
+os.makedirs("./static", exist_ok=True)
+
+def get_img_storing_locally(url):
+    filename = f"./static/{md5(url.encode('utf-8')).hexdigest()}.png"
+    if os.path.exists(filename):
+        return filename.replace("./static", "../../app/static")
+    with open(filename, "wb") as f:
+        f.write(requests.get(url).content)
+    return filename.replace("./static", "../../app/static")
+
+
+def get_img(url):
+    buffer = BytesIO(requests.get(url).content)
+    buffer.seek(0)
+    img = Image.open(buffer)
+    buffer2 = BytesIO()
+    img.save(buffer2, format="PNG")
+    buffer2.seek(0)
+    base64_data = base64.b64encode(buffer2.read())
+
+    data_url = "data:image/png;base64," + base64_data.decode("utf-8")
+    print(len(data_url))
+    return data_url
 
 df = pd.DataFrame(
     {"id": [1,2,3], "url": [
@@ -197,6 +227,7 @@ df = pd.DataFrame(
         "https://hips.hearstapps.com/hmg-prod/images/cute-cat-photos-1593441022.jpg?crop=0.670xw:1.00xh;0.167xw,0&resize=640:*",
         "https://t4.ftcdn.net/jpg/00/97/58/97/360_F_97589769_t45CqXyzjz0KXwoBZT9PRaWGHRk5hQqQ.jpg"],
         "label": [False, False, False]})
+df["img"] = df["url"].apply(get_img)
 
 thumbnail_renderer = JsCode("""
 class ThumbnailRenderer {
@@ -215,10 +246,10 @@ return this.eGui;
 builder = GridOptionsBuilder.from_dataframe(df)
 builder.configure_default_column(editable=True, wrapText=True, autoHeight=True)
 builder.configure_column("id", editable=False)
-builder.configure_column("url", cellRenderer=thumbnail_renderer, flex=True, editable=False)
+builder.configure_column("img", cellRenderer=thumbnail_renderer, flex=True, editable=False)
 
 # Display data with editable table
-edited_df = AgGrid(df, builder.build(), update_on=[("valueChanged", 5000)], allow_unsafe_jscode=True, height=200)
+edited_df = AgGrid(df, builder.build(), update_on=[("valueChanged", 5000)], allow_unsafe_jscode=True)
 print(edited_df["data"])
 # st.data_editor(
 #     df,
