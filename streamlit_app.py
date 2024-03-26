@@ -217,7 +217,7 @@ builder.configure_column("id", editable=False)
 builder.configure_column("url", cellRenderer=thumbnail_renderer, flex=True)
 
 # Display data with editable table
-edited_df = AgGrid(df, builder.build(), allow_unsafe_jscode=True)
+edited_df = AgGrid(df, builder.build(), allow_unsafe_jscode=True, height=200)
 # st.data_editor(
 #     df,
 #     disabled=['id'], # Don't allow editing the 'id' column.
